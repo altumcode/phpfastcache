@@ -2,7 +2,7 @@
 
 /**
  *
- * This file is part of phpFastCache.
+ * This file is part of Phpfastcache.
  *
  * @license MIT License (MIT)
  *
@@ -18,21 +18,20 @@ namespace Phpfastcache\Drivers\Apcu;
 
 use DateTime;
 use Phpfastcache\Cluster\AggregatablePoolInterface;
-use Phpfastcache\Core\Pool\{DriverBaseTrait, ExtendedCacheItemPoolInterface};
+use Phpfastcache\Core\Item\ExtendedCacheItemInterface;
+use Phpfastcache\Core\Pool\TaggableCacheItemPoolTrait;
 use Phpfastcache\Entities\DriverStatistic;
-use Phpfastcache\Exceptions\{PhpfastcacheInvalidArgumentException};
-use Psr\Cache\CacheItemInterface;
-
+use Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException;
+use Phpfastcache\Exceptions\PhpfastcacheLogicException;
 
 /**
  * Class Driver
  * @package phpFastCache\Drivers
- * @property Config $config Config object
  * @method Config getConfig() Return the config object
  */
-class Driver implements ExtendedCacheItemPoolInterface, AggregatablePoolInterface
+class Driver implements AggregatablePoolInterface
 {
-    use DriverBaseTrait;
+    use TaggableCacheItemPoolTrait;
 
     /**
      * @param string $key
@@ -68,10 +67,10 @@ class Driver implements ExtendedCacheItemPoolInterface, AggregatablePoolInterfac
      */
     public function getStats(): DriverStatistic
     {
-        $stats = (array)apcu_cache_info();
+        $stats = (array) apcu_cache_info();
         $date = (new DateTime())->setTimestamp($stats['start_time']);
-        $numEntries = (int)$stats['num_entries'];
-        $size = (int)$stats['mem_size'];
+        $numEntries = (int) $stats['num_entries'];
+        $size = (int) $stats['mem_size'];
 
         if ($this->getConfig()->getOptPrefix() !== '') {
             $numEntries = 0;
@@ -79,7 +78,7 @@ class Driver implements ExtendedCacheItemPoolInterface, AggregatablePoolInterfac
 
             foreach ($this->getStorageIterator(APC_ITER_KEY | APC_ITER_MEM_SIZE) as $entry) {
                 ++$numEntries;
-                $size += (int)($entry['mem_size'] ?? 0);
+                $size += (int) ($entry['mem_size'] ?? 0);
             }
         }
 
@@ -105,31 +104,14 @@ class Driver implements ExtendedCacheItemPoolInterface, AggregatablePoolInterfac
     }
 
     /**
-     * @param CacheItemInterface $item
-     * @return bool
-     * @throws PhpfastcacheInvalidArgumentException
+     * @param ExtendedCacheItemInterface $item
+     * @return ?array<string, mixed>
      */
-    protected function driverWrite(CacheItemInterface $item): bool
-    {
-        /**
-         * Check for Cross-Driver type confusion
-         */
-        if ($item instanceof Item) {
-            return (bool)apcu_store($this->getStorageKey($item->getKey()), $this->driverPreWrap($item), $item->getTtl());
-        }
-
-        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
-    }
-
-    /**
-     * @param CacheItemInterface $item
-     * @return null|array
-     */
-    protected function driverRead(CacheItemInterface $item)
+    protected function driverRead(ExtendedCacheItemInterface $item): ?array
     {
         $data = apcu_fetch($this->getStorageKey($item->getKey()), $success);
 
-        if ($success === false) {
+        if ($success === false || !is_array($data)) {
             return null;
         }
 
@@ -137,27 +119,25 @@ class Driver implements ExtendedCacheItemPoolInterface, AggregatablePoolInterfac
     }
 
     /**
-     * @param CacheItemInterface $item
+     * @param ExtendedCacheItemInterface $item
      * @return bool
      * @throws PhpfastcacheInvalidArgumentException
+     * @throws PhpfastcacheLogicException
      */
-    protected function driverDelete(CacheItemInterface $item): bool
+    protected function driverWrite(ExtendedCacheItemInterface $item): bool
     {
-        /**
-         * Check for Cross-Driver type confusion
-         */
-        if ($item instanceof Item) {
-            return (bool)apcu_delete($this->getStorageKey($item->getKey()));
-        }
-
-        throw new PhpfastcacheInvalidArgumentException('Cross-Driver type confusion detected');
+        return (bool) apcu_store($this->getStorageKey($item->getKey()), $this->driverPreWrap($item), $item->getTtl());
     }
 
-    /********************
-     *
-     * PSR-6 Extended Methods
-     *
-     *******************/
+    /**
+     * @param string $key
+     * @param string $encodedKey
+     * @return bool
+     */
+    protected function driverDelete(string $key, string $encodedKey): bool
+    {
+        return (bool) apcu_delete($this->getStorageKey($key));
+    }
 
     /**
      * @return bool
