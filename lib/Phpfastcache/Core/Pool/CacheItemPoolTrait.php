@@ -243,6 +243,8 @@ trait CacheItemPoolTrait
                             \usleep(100000);
 
                             $getItemDriverRead($cacheSlamsSpendSeconds + 0.1);
+
+                            return;
                         }
                     }
 
