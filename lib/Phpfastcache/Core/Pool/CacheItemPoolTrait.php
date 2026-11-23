@@ -459,7 +459,7 @@ trait CacheItemPoolTrait
             if ($this->getConfig()->isUseStaticItemCaching()) {
                 $this->itemInstances[$item->getKey()] = $item;
             }
-        } elseif (\spl_object_hash($item) !== \spl_object_hash($this->itemInstances[$item->getKey()])) {
+        } elseif ($item !== $this->itemInstances[$item->getKey()]) {
             throw new RuntimeException('Spl object hash mismatches ! You probably tried to save a detached item which has been already retrieved from cache.');
         }
 
@@ -544,7 +544,7 @@ trait CacheItemPoolTrait
      */
     public function attachItem(CacheItemInterface $item): static
     {
-        if (isset($this->itemInstances[$item->getKey()]) && \spl_object_hash($item) !== \spl_object_hash($this->itemInstances[$item->getKey()])) {
+        if (isset($this->itemInstances[$item->getKey()]) && $item !== $this->itemInstances[$item->getKey()]) {
             throw new PhpfastcacheLogicException(
                 'The item already exists and cannot be overwritten because the Spl object hash mismatches ! 
                 You probably tried to re-attach a detached item which has been already retrieved from cache.'
@@ -565,7 +565,7 @@ trait CacheItemPoolTrait
     public function isAttached(CacheItemInterface $item): bool
     {
         if (isset($this->itemInstances[$item->getKey()])) {
-            return \spl_object_hash($item) === \spl_object_hash($this->itemInstances[$item->getKey()]);
+            return $item === $this->itemInstances[$item->getKey()];
         }
         return false;
     }
