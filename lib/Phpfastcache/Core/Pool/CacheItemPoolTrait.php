@@ -400,7 +400,7 @@ trait CacheItemPoolTrait
         $this->assertCacheItemType($item, self::getItemClass());
         if (!\array_key_exists($item->getKey(), $this->itemInstances)) {
             $this->itemInstances[$item->getKey()] = $item;
-        } elseif (\spl_object_hash($item) !== \spl_object_hash($this->itemInstances[$item->getKey()])) {
+        } elseif ($item !== $this->itemInstances[$item->getKey()]) {
             throw new RuntimeException('Spl object hash mismatches ! You probably tried to save a detached item which has been already retrieved from cache.');
         }
 
