@@ -31,7 +31,7 @@ use stdClass;
 class ClusterAggregator implements AggregatorInterface
 {
     /**
-     * @var array<string, AggregatablePoolInterface>
+     * @var array<int, AggregatablePoolInterface>
      */
     protected array $driverPools;
 
@@ -52,7 +52,7 @@ class ClusterAggregator implements AggregatorInterface
             try {
                 $clusterAggregatorName = 'cluster_' . \bin2hex(\random_bytes(15));
             } catch (Exception) {
-                $clusterAggregatorName = 'cluster_' . \str_shuffle(\spl_object_hash(new stdClass()));
+                $clusterAggregatorName = 'cluster_' . \str_shuffle(\sprintf('%016x0000000000000000', \spl_object_id(new stdClass())));
             }
         }
 
@@ -74,13 +74,13 @@ class ClusterAggregator implements AggregatorInterface
             throw new PhpfastcacheLogicException('The cluster has been already build, cannot aggregate more pools.');
         }
 
-        $splHash = \spl_object_hash($driverPool);
-        if (!isset($this->driverPools[$splHash])) {
+        $splId = \spl_object_id($driverPool);
+        if (!isset($this->driverPools[$splId])) {
             if ($driverPool instanceof ClusterPoolInterface) {
                 throw new PhpfastcacheLogicException('Recursive cluster aggregation is not allowed !');
             }
 
-            $this->driverPools[$splHash] = $driverPool;
+            $this->driverPools[$splId] = $driverPool;
         } else {
             throw new PhpfastcacheLogicException('This pool has been already aggregated !');
         }
@@ -126,9 +126,9 @@ class ClusterAggregator implements AggregatorInterface
             throw new PhpfastcacheLogicException('The cluster has been already build, cannot disaggregate pools.');
         }
 
-        $splHash = \spl_object_hash($driverPool);
-        if (isset($this->driverPools[$splHash])) {
-            unset($this->driverPools[$splHash]);
+        $splId = \spl_object_id($driverPool);
+       if (isset($this->driverPools[$splId])) {
+            unset($this->driverPools[$splId]);
         } else {
             throw new PhpfastcacheLogicException('This pool was not aggregated !');
         }
