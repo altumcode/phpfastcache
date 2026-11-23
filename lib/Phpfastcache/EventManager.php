@@ -186,7 +186,7 @@ class EventManager implements EventManagerInterface
 
         $this->onEveryEvents(function (string $eventName, ...$args) {
             EventManager::getInstance()->dispatch($eventName, ...$args);
-        }, 'Scoped' . $pool->getDriverName() . spl_object_hash($this));
+        }, 'Scoped' . $pool->getDriverName() . spl_object_id($this));
 
         return $this;
     }
